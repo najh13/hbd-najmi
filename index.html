@@ -129,178 +129,139 @@
     </div>
 
     <script>
-        const starCanvas = document.getElementById('star-canvas');
-        const sCtx = starCanvas.getContext('2d');
-        const mainCanvas = document.getElementById('pixel-canvas');
-        const mCtx = mainCanvas.getContext('2d');
+    const starCanvas = document.getElementById('star-canvas');
+    const sCtx = starCanvas.getContext('2d');
+    const mainCanvas = document.getElementById('pixel-canvas');
+    const mCtx = mainCanvas.getContext('2d');
 
-        let particles = [];
-        let isBlown = false;
-        let animationActive = false;
-        const images = [];
-        const imageSources = ['char1.png', 'char2.png', 'char3.png', 'char4.png', 'char5.png'];
-        let loadedCount = 0;
+    let particles = [];
+    let isBlown = false;
+    const images = [];
+    // PASTIKAN NAMA FILE INI SAMA PERSIS DENGAN DI GITHUB (case-sensitive)
+    const imageSources = ['char1.png', 'char2.png', 'char3.png', 'char4.png', 'char5.png'];
+    let loadedCount = 0;
 
-        // Load semua gambar karakter
-        imageSources.forEach((src, idx) => {
-            const img = new Image();
-            img.src = src;
-            img.onload = () => { 
-                loadedCount++; 
-                images[idx] = img; 
-            };
-            img.onerror = () => console.log("Gagal muat: " + src);
+    imageSources.forEach((src, idx) => {
+        const img = new Image();
+        img.src = src;
+        img.onload = () => { loadedCount++; images[idx] = img; console.log(src + " loaded"); };
+        img.onerror = () => console.error("Gagal muat: " + src);
+    });
+
+    function resize() {
+        starCanvas.width = mainCanvas.width = window.innerWidth;
+        starCanvas.height = mainCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Background Bintang
+    const stars = Array.from({length: 40}, () => ({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        size: 2
+    }));
+
+    function drawStars() {
+        sCtx.clearRect(0, 0, starCanvas.width, starCanvas.height);
+        sCtx.fillStyle = "white";
+        stars.forEach(s => {
+            sCtx.globalAlpha = 0.2 + Math.random() * 0.8;
+            sCtx.fillRect(s.x, s.y, s.size, s.size);
         });
+        requestAnimationFrame(drawStars);
+    }
+    drawStars();
 
-        function resize() {
-            starCanvas.width = mainCanvas.width = window.innerWidth;
-            starCanvas.height = mainCanvas.height = window.innerHeight;
+    class Particle {
+        constructor(x, y, color, tx, ty, idx) {
+            this.x = Math.random() * mainCanvas.width;
+            this.y = Math.random() * mainCanvas.height;
+            this.tx = tx; this.ty = ty;
+            this.color = color;
+            this.size = 3;
+            this.vx = 0; this.vy = 0;
+            this.idx = idx;
         }
-        window.addEventListener('resize', resize);
-        resize();
-
-        // Partikel Bintang Latar Belakang
-        const stars = Array.from({length: 60}, () => ({
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-            size: Math.random() * 2 + 1,
-            blink: Math.random() * 0.05
-        }));
-
-        function drawStars() {
-            sCtx.clearRect(0, 0, starCanvas.width, starCanvas.height);
-            stars.forEach(s => {
-                sCtx.fillStyle = `rgba(255, 255, 255, ${0.3 + Math.abs(Math.sin(Date.now() * 0.002 + s.x))})`;
-                sCtx.fillRect(s.x, s.y, s.size, s.size);
-            });
-            requestAnimationFrame(drawStars);
-        }
-        drawStars();
-
-        // Class Partikel untuk Karakter
-        class Particle {
-            constructor(x, y, color, tx, ty, charIdx) {
-                this.x = Math.random() * mainCanvas.width;
-                this.y = Math.random() * mainCanvas.height;
-                this.tx = tx; 
-                this.ty = ty;
-                this.color = color;
-                this.size = 3;
-                this.vx = 0; 
-                this.vy = 0;
-                this.charIdx = charIdx;
-            }
-
-            update() {
-                if(!isBlown) {
-                    // Animasi Gerak Jalan/Bounce
-                    let time = Date.now() * 0.006;
-                    let bounce = Math.sin(time + (this.charIdx * 1.2)) * 10;
-                    let sway = Math.cos(time + (this.charIdx * 1.2)) * 3;
-
-                    let targetX = this.tx + sway;
-                    let targetY = this.ty + bounce;
-
-                    this.x += (targetX - this.x) * 0.08;
-                    this.y += (targetY - this.y) * 0.08;
-                } else {
-                    // Animasi Meledak Berantakan
-                    this.x += this.vx;
-                    this.y += this.vy;
-                    this.vy += 0.25; // Gravitas
-                }
-            }
-
-            draw() {
-                mCtx.fillStyle = this.color;
-                mCtx.fillRect(this.x, this.y, this.size, this.size);
-            }
-        }
-
-        function initSequence() {
-            if(loadedCount < 5) return alert("Gambar belum siap, tunggu sebentar ya!");
-            
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('ui-layer').style.display = 'block';
-
-            const tempCanvas = document.createElement('canvas');
-            const tCtx = tempCanvas.getContext('2d');
-            
-            const slice = mainCanvas.width / 5;
-            
-            images.forEach((img, idx) => {
-                // Skala agar 5 karakter muat berjejer
-                const scale = (slice * 0.85) / img.width;
-                tempCanvas.width = img.width;
-                tempCanvas.height = img.height;
+        update() {
+            if(!isBlown) {
+                // EFEK GERAK JALAN:
+                let t = Date.now() * 0.008;
+                let bounce = Math.sin(t + (this.idx * 1.5)) * 12; // Gerak naik turun
+                let sway = Math.cos(t + (this.idx * 1.5)) * 4;   // Gerak kanan kiri
                 
-                tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-                tCtx.drawImage(img, 0, 0);
-                const data = tCtx.getImageData(0, 0, img.width, img.height).data;
+                this.x += ((this.tx + sway) - this.x) * 0.1;
+                this.y += ((this.ty + bounce) - this.y) * 0.1;
+            } else {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2;
+            }
+        }
+        draw() {
+            mCtx.fillStyle = this.color;
+            mCtx.fillRect(this.x, this.y, this.size, this.size);
+        }
+    }
 
-                for (let y = 0; y < img.height; y += 4) {
-                    for (let x = 0; x < img.width; x += 4) {
-                        const i = (y * img.width + x) * 4;
-                        if(data[i+3] > 120) {
-                            particles.push(new Particle(
-                                x, y, 
-                                `rgb(${data[i]},${data[i+1]},${data[i+2]})`,
-                                (slice * idx) + (slice/2) - (img.width*scale/2) + (x*scale),
-                                (mainCanvas.height * 0.38) + (y*scale),
-                                idx
-                            ));
-                        }
+    function initSequence() {
+        if(loadedCount < 1) return alert("Gambar belum keload semua atau nama file salah!");
+        
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('ui-layer').style.display = 'block';
+
+        const tempCanvas = document.createElement('canvas');
+        const tCtx = tempCanvas.getContext('2d');
+        const slice = mainCanvas.width / 5;
+
+        images.forEach((img, idx) => {
+            if(!img) return;
+            const scale = (slice * 0.8) / img.width;
+            tempCanvas.width = img.width;
+            tempCanvas.height = img.height;
+            tCtx.drawImage(img, 0, 0);
+            const data = tCtx.getImageData(0, 0, img.width, img.height).data;
+
+            for (let y = 0; y < img.height; y += 5) {
+                for (let x = 0; x < img.width; x += 5) {
+                    const i = (y * img.width + x) * 4;
+                    if(data[i+3] > 128) {
+                        particles.push(new Particle(
+                            x, y, `rgb(${data[i]},${data[i+1]},${data[i+2]})`,
+                            (slice * idx) + (slice/2) - (img.width*scale/2) + (x*scale),
+                            (mainCanvas.height * 0.35) + (y*scale),
+                            idx
+                        ));
                     }
                 }
-            });
-            
-            if(!animationActive) {
-                animationActive = true;
-                animate();
             }
-        }
+        });
+        animate(); // Mulai loop animasi
+    }
 
-        function blowCandle() {
-            if(isBlown) return;
-            isBlown = true;
-            
-            // Matikan lilin & instruksi
-            document.getElementById('lilin').style.display = 'none';
-            document.querySelector('.instruction').innerText = "*Puff! Lilin Padam*";
-            
-            // Beri kecepatan acak pada partikel (meledak)
-            particles.forEach(p => {
-                p.vx = (Math.random() - 0.5) * 30;
-                p.vy = (Math.random() - 0.8) * 30;
-            });
+    function blowCandle() {
+        isBlown = true;
+        document.getElementById('lilin').style.display = 'none';
+        particles.forEach(p => {
+            p.vx = (Math.random() - 0.5) * 30;
+            p.vy = (Math.random() - 0.7) * 30;
+        });
+        setTimeout(() => {
+            particles = [];
+            document.getElementById('ui-layer').style.display = 'none';
+            document.getElementById('final-photo').style.display = 'block';
+            document.getElementById('hbd-text').style.display = 'block';
+        }, 1200);
+    }
 
-            // Transisi ke foto asli
-            setTimeout(() => {
-                particles = []; // Bersihkan memory partikel
-                document.getElementById('ui-layer').style.display = 'none';
-                
-                const photo = document.getElementById('final-photo');
-                const text = document.getElementById('hbd-text');
-                
-                photo.style.display = 'block';
-                text.style.display = 'block';
-                
-                // Animasi sederhana untuk foto
-                photo.animate([
-                    { transform: 'scale(0) rotate(-20deg)', opacity: 0 },
-                    { transform: 'scale(1) rotate(0deg)', opacity: 1 }
-                ], { duration: 800, easing: 'ease-out' });
-            }, 1000);
-        }
-
-        function animate() {
-            mCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-            particles.forEach(p => {
-                p.update();
-                p.draw();
-            });
-            requestAnimationFrame(animate);
-        }
-    </script>
+    function animate() {
+        mCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+        particles.forEach(p => {
+            p.update();
+            p.draw();
+        });
+        requestAnimationFrame(animate);
+    }
+</script>
 </body>
 </html>
