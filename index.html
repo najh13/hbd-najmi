@@ -23,7 +23,6 @@
         #star-canvas { z-index: 1; }
         #pixel-canvas { z-index: 5; pointer-events: auto; }
 
-        /* Step 1: Overlay */
         #overlay { z-index: 20; text-align: center; padding: 20px; }
         h1 { font-size: 0.8rem; margin-bottom: 30px; line-height: 1.6; text-shadow: 2px 2px #ff0000; }
         button {
@@ -36,7 +35,6 @@
             box-shadow: 4px 4px 0px #888;
         }
 
-        /* Step 2: UI Kue */
         #ui-layer {
             position: absolute;
             bottom: 8%;
@@ -66,7 +64,6 @@
         .instruction { font-size: 0.5rem; color: #00ff00; animation: pulse 1s infinite; }
         @keyframes pulse { 50% { opacity: 0.3; } }
 
-        /* Step 3: Video Final */
         #final-video {
             position: absolute;
             width: 85%;
@@ -74,18 +71,18 @@
             border: 6px solid white;
             border-radius: 10px;
             display: none;
-            z-index: 10;
+            z-index: 25; /* Paling depan */
             background: #000;
         }
         .hbd-text {
             display: none;
             position: absolute;
-            top: 12%;
-            z-index: 12;
+            top: 10%;
+            z-index: 26;
             color: #ff00ff;
             text-align: center;
             width: 100%;
-            font-size: 1rem;
+            font-size: 0.9rem;
             text-shadow: 2px 2px #000;
         }
     </style>
@@ -100,7 +97,7 @@
         <button onclick="initSequence()">YES!</button>
     </div>
 
-    <video id="final-video" playsinline muted preload="auto">
+    <video id="final-video" playsinline muted preload="auto" loop>
         <source src="video_ultah.mp4" type="video/mp4">
     </video>
     <div class="hbd-text" id="hbd-text">selamat 21 😂</div>
@@ -118,6 +115,7 @@
         const sCtx = starCanvas.getContext('2d');
         const mainCanvas = document.getElementById('pixel-canvas');
         const mCtx = mainCanvas.getContext('2d');
+        const video = document.getElementById('final-video');
 
         let particles = [];
         let isBlown = false;
@@ -140,7 +138,7 @@
         resize();
 
         // Bintang
-        const stars = Array.from({length: 50}, () => ({
+        const stars = Array.from({length: 40}, () => ({
             x: Math.random() * window.innerWidth,
             y: Math.random() * window.innerHeight,
             size: 2
@@ -150,7 +148,7 @@
             sCtx.clearRect(0, 0, starCanvas.width, starCanvas.height);
             sCtx.fillStyle = "white";
             stars.forEach(s => {
-                sCtx.globalAlpha = 0.4 + Math.random() * 0.6;
+                sCtx.globalAlpha = 0.3 + Math.random() * 0.7;
                 sCtx.fillRect(s.x, s.y, s.size, s.size);
             });
             requestAnimationFrame(drawStars);
@@ -187,13 +185,14 @@
         }
 
         function initSequence() {
-            if(loadedCount < 1) return alert("Sabar, gambar lagi loading...");
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'block';
             
-            // PENTING: Trigger load video lewat interaksi pertama
-            const video = document.getElementById('final-video');
+            // PAKSA VIDEO LOAD
             video.load();
+            video.play().then(() => {
+                video.pause(); // Cuma buat pancing browser biar video dianggap "user-initiated"
+            }).catch(e => console.log("Video warm up"));
 
             const tempCanvas = document.createElement('canvas');
             const tCtx = tempCanvas.getContext('2d');
@@ -206,8 +205,8 @@
                 tempCanvas.height = img.height;
                 tCtx.drawImage(img, 0, 0);
                 const data = tCtx.getImageData(0, 0, img.width, img.height).data;
-                for (let y = 0; y < img.height; y += 5) {
-                    for (let x = 0; x < img.width; x += 5) {
+                for (let y = 0; y < img.height; y += 6) {
+                    for (let x = 0; x < img.width; x += 6) {
                         const i = (y * img.width + x) * 4;
                         if(data[i+3] > 128) {
                             particles.push(new Particle(
@@ -228,38 +227,29 @@
             isBlown = true;
             document.getElementById('lilin').style.display = 'none';
             
+            // PAKSA PLAY VIDEO DULUAN (MUTED)
+            video.muted = true;
+            video.style.display = 'block';
+            video.play();
+
             particles.forEach(p => {
-                p.vx = (Math.random() - 0.5) * 35;
-                p.vy = (Math.random() - 0.8) * 35;
+                p.vx = (Math.random() - 0.5) * 40;
+                p.vy = (Math.random() - 0.8) * 40;
             });
 
             setTimeout(() => {
                 particles = [];
                 document.getElementById('ui-layer').style.display = 'none';
-                const video = document.getElementById('final-video');
-                const text = document.getElementById('hbd-text');
+                document.getElementById('hbd-text').style.display = 'block';
                 
-                video.style.display = 'block';
-                text.style.display = 'block';
-
-                // PROSES PLAY VIDEO
-                video.muted = false; // Nyalakan suara
-                let playPromise = video.play();
-
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        // Jika gagal play dengan suara, play muted dulu baru minta unmuted
-                        console.log("Autoplay blocked, playing muted first.");
-                        video.muted = true;
-                        video.play();
-                    });
-                }
+                // Nyalakan suara setelah video dipastikan jalan
+                video.muted = false; 
 
                 video.animate([
                     { transform: 'scale(0)', opacity: 0 },
                     { transform: 'scale(1)', opacity: 1 }
-                ], { duration: 800, easing: 'ease-out' });
-            }, 1200);
+                ], { duration: 500, fill: 'forwards' });
+            }, 1000);
         }
 
         function animate() {
