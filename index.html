@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HBD Najmi!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background-color: #000; 
+            overflow: hidden; 
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+        }
+
+        /* Background Bintang Pixel */
+        #star-canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1;
+        }
+
+        /* Overlay Pertanyaan */
+        #overlay {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 { font-size: 1.2rem; margin-bottom: 30px; line-height: 1.5; }
+        
+        button {
+            padding: 15px 30px;
+            font-family: 'Press Start 2P', cursive;
+            background: #fff;
+            border: 4px solid #555;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+        button:active { transform: scale(0.9); background: #ffff00; }
+
+        /* Konten Utama (Disembunyikan dulu) */
+        #main-content {
+            display: none;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            text-align: center;
+        }
+
+        #pixel-canvas { width: 100%; height: 100%; }
+
+        .message {
+            position: absolute;
+            bottom: 10%;
+            width: 100%;
+            font-size: 1rem;
+            color: #ffff00;
+            text-shadow: 3px 3px #ff0000;
+            pointer-events: none;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="star-canvas"></canvas>
+
+    <div id="overlay">
+        <h1>R U NAJMI?</h1>
+        <button onclick="startCelebration()">YES!</button>
+    </div>
+
+    <div id="main-content">
+        <canvas id="pixel-canvas"></canvas>
+        <div class="message">SELAMAT 21 TUAK!</div>
+    </div>
+
+    <script>
+        const starCanvas = document.getElementById('star-canvas');
+        const sCtx = starCanvas.getContext('2d');
+        const mainCanvas = document.getElementById('pixel-canvas');
+        const mCtx = mainCanvas.getContext('2d');
+        
+        let particles = [];
+        let animationStarted = false;
+        const img = new Image();
+        
+        // GANTI INI dengan nama file gambar salah satu karakter yang kamu upload tadi
+        img.src = 'karakter.png'; 
+
+        function initCanvas() {
+            starCanvas.width = window.innerWidth;
+            starCanvas.height = window.innerHeight;
+            mainCanvas.width = window.innerWidth;
+            mainCanvas.height = window.innerHeight;
+        }
+
+        // Buat Background Bintang
+        const stars = Array.from({length: 100}, () => ({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            size: Math.random() * 2,
+            opacity: Math.random()
+        }));
+
+        function drawStars() {
+            sCtx.clearRect(0, 0, starCanvas.width, starCanvas.height);
+            sCtx.fillStyle = "white";
+            stars.forEach(s => {
+                sCtx.globalAlpha = s.opacity;
+                sCtx.fillRect(s.x, s.y, s.size, s.size);
+            });
+            requestAnimationFrame(drawStars);
+        }
+
+        class Particle {
+            constructor(x, y, color, targetX, targetY) {
+                this.x = Math.random() * mainCanvas.width;
+                this.y = Math.random() * mainCanvas.height;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.color = color;
+                this.size = 4; // Ukuran kotak pixel
+                this.speed = 0.05 + Math.random() * 0.05;
+            }
+
+            update() {
+                // Pergerakan menuju target (membentuk gambar)
+                this.x += (this.targetX - this.x) * this.speed;
+                this.y += (this.targetY - this.y) * this.speed;
+            }
+
+            draw() {
+                mCtx.fillStyle = this.color;
+                mCtx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+
+        function startCelebration() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+            
+            // Analisis Gambar untuk jadi Pixel
+            const tempCanvas = document.createElement('canvas');
+            const tCtx = tempCanvas.getContext('2d');
+            const scale = 0.5; // Kecilkan gambar agar tidak berat
+            tempCanvas.width = img.width * scale;
+            tempCanvas.height = img.height * scale;
+            tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            const data = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+            const offsetX = (mainCanvas.width - tempCanvas.width * 6) / 2;
+            const offsetY = (mainCanvas.height - tempCanvas.height * 6) / 2;
+
+            for (let y = 0; y < tempCanvas.height; y += 2) {
+                for (let x = 0; x < tempCanvas.width; x += 2) {
+                    const i = (y * tempCanvas.width + x) * 4;
+                    if (data[i + 3] > 128) { // Jika tidak transparan
+                        const color = `rgb(${data[i]},${data[i+1]},${data[i+2]})`;
+                        particles.push(new Particle(x, y, color, x * 6 + offsetX, y * 6 + offsetY));
+                    }
+                }
+            }
+            animate();
+        }
+
+        function animate() {
+            mCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        // Interaksi Klik: Loncat
+        mainCanvas.addEventListener('click', () => {
+            particles.forEach(p => {
+                p.y -= 50; // Efek loncat
+            });
+        });
+
+        window.addEventListener('resize', initCanvas);
+        initCanvas();
+        drawStars();
+
+    </script>
+</body>
+</html>
