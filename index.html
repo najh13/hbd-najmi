@@ -6,7 +6,6 @@
     <title>HBD Najmi!</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        /* Reset & Base Style */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
             background-color: #000; 
@@ -20,19 +19,13 @@
             color: white;
         }
 
-        /* Canvas Layers */
         canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
         #star-canvas { z-index: 1; }
         #pixel-canvas { z-index: 5; pointer-events: auto; }
 
-        /* Step 1: Pertanyaan Awal */
-        #overlay { 
-            position: relative;
-            z-index: 20; 
-            text-align: center; 
-            padding: 20px; 
-        }
-        h1 { font-size: 0.9rem; margin-bottom: 30px; line-height: 1.6; text-shadow: 2px 2px #ff0000; }
+        /* Step 1: Overlay Awal */
+        #overlay { z-index: 20; text-align: center; padding: 20px; }
+        h1 { font-size: 0.8rem; margin-bottom: 30px; line-height: 1.6; text-shadow: 2px 2px #ff0000; }
         button {
             padding: 15px 25px;
             font-family: 'Press Start 2P', cursive;
@@ -42,12 +35,11 @@
             font-size: 0.8rem;
             box-shadow: 4px 4px 0px #888;
         }
-        button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0px #888; }
 
-        /* Step 2: Kue & Instruksi Tiup */
+        /* Step 2: UI Kue */
         #ui-layer {
             position: absolute;
-            bottom: 8%;
+            bottom: 10%;
             z-index: 15;
             width: 100%;
             text-align: center;
@@ -65,51 +57,39 @@
             top: -25px;
             left: 50%;
             transform: translateX(-50%);
-            animation: flicker 0.15s infinite alternate;
+            animation: flicker 0.1s infinite alternate;
         }
         @keyframes flicker {
-            from { opacity: 0.7; transform: translateX(-50%) scale(1) translateY(0); }
-            to { opacity: 1; transform: translateX(-50%) scale(1.3) translateY(-5px); }
+            from { opacity: 0.8; transform: translateX(-50%) scale(1); }
+            to { opacity: 1; transform: translateX(-50%) scale(1.3); }
         }
-        .instruction {
-            font-size: 0.55rem;
-            color: #00ff00;
-            letter-spacing: 1px;
-            animation: pulse 1s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+        .instruction { font-size: 0.5rem; color: #00ff00; animation: pulse 1s infinite; }
+        @keyframes pulse { 50% { opacity: 0.3; } }
 
-        /* Step 3: Foto Akhir & Ucapan */
+        /* Step 3: Hasil Akhir */
         #final-photo {
             position: absolute;
             width: 75%;
-            max-width: 280px;
+            max-width: 300px;
             border: 6px solid white;
             display: none;
             z-index: 10;
-            box-shadow: 0 0 20px rgba(255,255,255,0.5);
         }
         .hbd-text {
             display: none;
             position: absolute;
-            top: 12%;
+            top: 15%;
             z-index: 12;
             color: #ff00ff;
             text-align: center;
             width: 100%;
-            font-size: 0.75rem;
-            line-height: 1.5;
-            text-shadow: 2px 2px #000;
+            font-size: 1rem;
         }
     </style>
 </head>
 <body>
 
     <canvas id="star-canvas"></canvas>
-    
     <canvas id="pixel-canvas"></canvas>
 
     <div id="overlay">
@@ -117,151 +97,158 @@
         <button onclick="initSequence()">YES!</button>
     </div>
 
-    <img id="final-photo" src="foto_asli.jpg" alt="Final Surprise">
-    <div class="hbd-text" id="hbd-text">SELAMAT 21 <br>NAJMI CORTIS</div>
+    <img id="final-photo" src="foto_asli.jpg">
+    <div class="hbd-text" id="hbd-text">selamat 21 😂</div>
 
     <div id="ui-layer">
         <div class="cake-container" onclick="blowCandle()">
             <span class="flame" id="lilin">🔥</span>
             🎂<br><span style="font-size: 1.2rem;">21</span>
         </div>
-        <p class="instruction">>>> TAP KUE UNTUK TIUP LILIN <<<</p>
+        <p class="instruction">TAP KUE BUAT TIUP LILIN</p>
     </div>
 
     <script>
-    const starCanvas = document.getElementById('star-canvas');
-    const sCtx = starCanvas.getContext('2d');
-    const mainCanvas = document.getElementById('pixel-canvas');
-    const mCtx = mainCanvas.getContext('2d');
+        const starCanvas = document.getElementById('star-canvas');
+        const sCtx = starCanvas.getContext('2d');
+        const mainCanvas = document.getElementById('pixel-canvas');
+        const mCtx = mainCanvas.getContext('2d');
 
-    let particles = [];
-    let isBlown = false;
-    const images = [];
-    // PASTIKAN NAMA FILE INI SAMA PERSIS DENGAN DI GITHUB (case-sensitive)
-    const imageSources = ['char1.png', 'char2.png', 'char3.png', 'char4.png', 'char5.png'];
-    let loadedCount = 0;
+        let particles = [];
+        let isBlown = false;
+        let animationStarted = false;
+        const images = [];
+        const imageSources = ['char1.png', 'char2.png', 'char3.png', 'char4.png', 'char5.png'];
+        let loadedCount = 0;
 
-    imageSources.forEach((src, idx) => {
-        const img = new Image();
-        img.src = src;
-        img.onload = () => { loadedCount++; images[idx] = img; console.log(src + " loaded"); };
-        img.onerror = () => console.error("Gagal muat: " + src);
-    });
-
-    function resize() {
-        starCanvas.width = mainCanvas.width = window.innerWidth;
-        starCanvas.height = mainCanvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    // Background Bintang
-    const stars = Array.from({length: 40}, () => ({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        size: 2
-    }));
-
-    function drawStars() {
-        sCtx.clearRect(0, 0, starCanvas.width, starCanvas.height);
-        sCtx.fillStyle = "white";
-        stars.forEach(s => {
-            sCtx.globalAlpha = 0.2 + Math.random() * 0.8;
-            sCtx.fillRect(s.x, s.y, s.size, s.size);
+        // Load Images
+        imageSources.forEach((src, idx) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => { loadedCount++; images[idx] = img; };
+            img.onerror = () => console.error("Missing: " + src);
         });
-        requestAnimationFrame(drawStars);
-    }
-    drawStars();
 
-    class Particle {
-        constructor(x, y, color, tx, ty, idx) {
-            this.x = Math.random() * mainCanvas.width;
-            this.y = Math.random() * mainCanvas.height;
-            this.tx = tx; this.ty = ty;
-            this.color = color;
-            this.size = 3;
-            this.vx = 0; this.vy = 0;
-            this.idx = idx;
+        function resize() {
+            starCanvas.width = mainCanvas.width = window.innerWidth;
+            starCanvas.height = mainCanvas.height = window.innerHeight;
         }
-        update() {
-            if(!isBlown) {
-                // EFEK GERAK JALAN:
-                let t = Date.now() * 0.008;
-                let bounce = Math.sin(t + (this.idx * 1.5)) * 12; // Gerak naik turun
-                let sway = Math.cos(t + (this.idx * 1.5)) * 4;   // Gerak kanan kiri
-                
-                this.x += ((this.tx + sway) - this.x) * 0.1;
-                this.y += ((this.ty + bounce) - this.y) * 0.1;
-            } else {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.vy += 0.2;
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Background Bintang Pixel
+        const stars = Array.from({length: 50}, () => ({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            size: 2
+        }));
+
+        function drawStars() {
+            sCtx.clearRect(0, 0, starCanvas.width, starCanvas.height);
+            sCtx.fillStyle = "white";
+            stars.forEach(s => {
+                sCtx.globalAlpha = 0.3 + Math.random() * 0.7;
+                sCtx.fillRect(s.x, s.y, s.size, s.size);
+            });
+            requestAnimationFrame(drawStars);
+        }
+        drawStars();
+
+        class Particle {
+            constructor(x, y, color, tx, ty, charIdx) {
+                this.x = Math.random() * mainCanvas.width;
+                this.y = Math.random() * mainCanvas.height;
+                this.tx = tx; this.ty = ty;
+                this.color = color;
+                this.size = 3;
+                this.vx = 0; this.vy = 0;
+                this.charIdx = charIdx;
             }
-        }
-        draw() {
-            mCtx.fillStyle = this.color;
-            mCtx.fillRect(this.x, this.y, this.size, this.size);
-        }
-    }
 
-    function initSequence() {
-        if(loadedCount < 1) return alert("Gambar belum keload semua atau nama file salah!");
-        
-        document.getElementById('overlay').style.display = 'none';
-        document.getElementById('ui-layer').style.display = 'block';
+            update() {
+                if(!isBlown) {
+                    // Animasi Jalan/Membal (Bounce & Sway)
+                    let time = Date.now() * 0.008;
+                    let bounce = Math.sin(time + (this.charIdx * 1.2)) * 15; // Tinggi loncatan
+                    let sway = Math.cos(time + (this.charIdx * 1.2)) * 4;   // Goyang kanan kiri
 
-        const tempCanvas = document.createElement('canvas');
-        const tCtx = tempCanvas.getContext('2d');
-        const slice = mainCanvas.width / 5;
-
-        images.forEach((img, idx) => {
-            if(!img) return;
-            const scale = (slice * 0.8) / img.width;
-            tempCanvas.width = img.width;
-            tempCanvas.height = img.height;
-            tCtx.drawImage(img, 0, 0);
-            const data = tCtx.getImageData(0, 0, img.width, img.height).data;
-
-            for (let y = 0; y < img.height; y += 5) {
-                for (let x = 0; x < img.width; x += 5) {
-                    const i = (y * img.width + x) * 4;
-                    if(data[i+3] > 128) {
-                        particles.push(new Particle(
-                            x, y, `rgb(${data[i]},${data[i+1]},${data[i+2]})`,
-                            (slice * idx) + (slice/2) - (img.width*scale/2) + (x*scale),
-                            (mainCanvas.height * 0.35) + (y*scale),
-                            idx
-                        ));
-                    }
+                    this.x += ((this.tx + sway) - this.x) * 0.1;
+                    this.y += ((this.ty + bounce) - this.y) * 0.1;
+                } else {
+                    // Efek Hancur
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vy += 0.25;
                 }
             }
-        });
-        animate(); // Mulai loop animasi
-    }
 
-    function blowCandle() {
-        isBlown = true;
-        document.getElementById('lilin').style.display = 'none';
-        particles.forEach(p => {
-            p.vx = (Math.random() - 0.5) * 30;
-            p.vy = (Math.random() - 0.7) * 30;
-        });
-        setTimeout(() => {
-            particles = [];
-            document.getElementById('ui-layer').style.display = 'none';
-            document.getElementById('final-photo').style.display = 'block';
-            document.getElementById('hbd-text').style.display = 'block';
-        }, 1200);
-    }
+            draw() {
+                mCtx.fillStyle = this.color;
+                mCtx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
 
-    function animate() {
-        mCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-        particles.forEach(p => {
-            p.update();
-            p.draw();
-        });
-        requestAnimationFrame(animate);
-    }
-</script>
+        function initSequence() {
+            if(loadedCount < 1) return alert("Gambar belum ke-load semua!");
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'block';
+
+            const tempCanvas = document.createElement('canvas');
+            const tCtx = tempCanvas.getContext('2d');
+            const slice = mainCanvas.width / 5;
+
+            images.forEach((img, idx) => {
+                if(!img) return;
+                const scale = (slice * 0.8) / img.width;
+                tempCanvas.width = img.width;
+                tempCanvas.height = img.height;
+                tCtx.drawImage(img, 0, 0);
+                const data = tCtx.getImageData(0, 0, img.width, img.height).data;
+
+                for (let y = 0; y < img.height; y += 5) {
+                    for (let x = 0; x < img.width; x += 5) {
+                        const i = (y * img.width + x) * 4;
+                        if(data[i+3] > 128) {
+                            particles.push(new Particle(
+                                x, y, `rgb(${data[i]},${data[i+1]},${data[i+2]})`,
+                                (slice * idx) + (slice/2) - (img.width*scale/2) + (x*scale),
+                                (mainCanvas.height * 0.35) + (y*scale),
+                                idx
+                            ));
+                        }
+                    }
+                }
+            });
+            if(!animationStarted) {
+                animationStarted = true;
+                animate();
+            }
+        }
+
+        function blowCandle() {
+            isBlown = true;
+            document.getElementById('lilin').style.display = 'none';
+            particles.forEach(p => {
+                p.vx = (Math.random() - 0.5) * 35;
+                p.vy = (Math.random() - 0.8) * 35;
+            });
+
+            setTimeout(() => {
+                particles = [];
+                document.getElementById('ui-layer').style.display = 'none';
+                document.getElementById('final-photo').style.display = 'block';
+                document.getElementById('hbd-text').style.display = 'block';
+            }, 1200);
+        }
+
+        function animate() {
+            mCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+    </script>
 </body>
 </html>
